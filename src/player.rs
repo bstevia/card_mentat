@@ -1,6 +1,7 @@
 use crate::card::Card;
-use crate::hand::{combinations, Hand, HandRank};
+use crate::hand::{combinations, Hand};
 use std::fmt;
+use std::ops::RangeInclusive;
 
 #[derive(Debug)]
 pub struct Player {
@@ -22,33 +23,37 @@ impl Player {
         self.hole_cards.push(card);
     }
 
-    pub fn evaluate_hand(&mut self, community_cards: &[Card], wild_cards: &[Card]) {
-        let mut all_cards = self.hole_cards.clone();
-        all_cards.extend_from_slice(community_cards);
+    pub fn evaluate_hand(
+        &mut self,
+        community_cards: &[Card],
+        wild_cards: &[Card],
+        hole_cards_to_play: &RangeInclusive<usize>,
+    ) {
+        let mut best: Option<Hand> = None;
 
-        if all_cards.len() >= 5 {
-            let best_5_cards = self.find_best_5_card_combination(&all_cards, wild_cards);
-            self.best_hand = Some(Hand::new(best_5_cards, wild_cards));
-        }
-    }
+        // A 5-card hand uses `h` hole cards and `5 - h` board cards.
+        let min_hole = *hole_cards_to_play.start();
+        let max_hole = (*hole_cards_to_play.end()).min(self.hole_cards.len()).min(5);
 
-    fn find_best_5_card_combination(&self, cards: &[Card], wild_cards: &[Card]) -> Vec<Card> {
-        if cards.len() == 5 {
-            return cards.to_vec();
-        }
+        for h in min_hole..=max_hole {
+            let board_needed = 5 - h;
+            if board_needed > community_cards.len() {
+                continue;
+            }
 
-        let mut best_hand = Vec::new();
-        let mut best_rank = HandRank::HighCard;
-
-        for combo in combinations(cards, 5) {
-            let hand = Hand::new(combo.clone(), wild_cards);
-            if hand.rank > best_rank {
-                best_rank = hand.rank;
-                best_hand = combo;
+            for hole_combo in combinations(&self.hole_cards, h) {
+                for board_combo in combinations(community_cards, board_needed) {
+                    let mut five = hole_combo.clone();
+                    five.extend_from_slice(&board_combo);
+                    let hand = Hand::new(five, wild_cards);
+                    if best.as_ref().map_or(true, |b| hand.rank > b.rank) {
+                        best = Some(hand);
+                    }
+                }
             }
         }
 
-        best_hand
+        self.best_hand = best;
     }
 }
 

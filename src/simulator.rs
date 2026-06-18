@@ -2,34 +2,31 @@ use crate::card::Card;
 use crate::deck::Deck;
 use crate::hand::HandRank;
 use crate::player::Player;
+use crate::rules::GameRules;
 
 #[derive(Debug)]
 pub struct PokerSimulator {
     pub players: Vec<Player>,
     pub community_cards: Vec<Card>,
-    pub wild_cards: Vec<Card>,
-    pub hole_cards_per_player: usize,
+    pub rules: GameRules,
     deck: Deck,
 }
 
 impl PokerSimulator {
-    pub fn new(player_count: usize, hole_cards_per_player: usize, wild_cards: Vec<Card>) -> Self {
-        let mut players = Vec::new();
-        for i in 1..=player_count {
-            players.push(Player::new(i));
-        }
+    pub fn new(rules: GameRules) -> Self {
+        let players = (1..=rules.num_players).map(Player::new).collect();
+        let deck = Deck::new(rules.num_decks);
 
         PokerSimulator {
             players,
             community_cards: Vec::new(),
-            wild_cards,
-            hole_cards_per_player,
-            deck: Deck::new(),
+            deck,
+            rules,
         }
     }
 
     pub fn deal_hand(&mut self) {
-        self.deck = Deck::new();
+        self.deck = Deck::new(self.rules.num_decks);
         self.deck.shuffle();
         self.community_cards.clear();
 
@@ -39,8 +36,7 @@ impl PokerSimulator {
             player.best_hand = None;
         }
 
-        // Deal hole cards
-        for _ in 0..self.hole_cards_per_player {
+        for _ in 0..self.rules.hole_cards_per_player {
             for player in &mut self.players {
                 if let Some(card) = self.deck.deal() {
                     player.add_hole_card(card);
@@ -59,7 +55,11 @@ impl PokerSimulator {
 
     pub fn evaluate_all_hands(&mut self) {
         for player in &mut self.players {
-            player.evaluate_hand(&self.community_cards, &self.wild_cards);
+            player.evaluate_hand(
+                &self.community_cards,
+                &self.rules.wild_cards,
+                &self.rules.hole_cards_to_play,
+            );
         }
     }
 
@@ -84,29 +84,26 @@ impl PokerSimulator {
 
     pub fn simulate_complete_hand(&mut self) {
         self.deal_hand();
-
-        // Deal community cards
-        if self.hole_cards_per_player == 2 {
-            self.deal_community_cards(5);
-        }
-
+        self.deal_community_cards(self.rules.community_cards);
         self.evaluate_all_hands();
     }
 
     pub fn get_hand_types(&self) -> Vec<HandRank> {
         self.players
             .iter()
-            .filter_map(|player| player.best_hand.as_ref().map(|hand| hand.rank.clone()))
+            .filter_map(|player| player.best_hand.as_ref().map(|hand| hand.rank))
             .collect()
     }
 
     pub fn print_game_state(&self) {
         println!("=== Poker Hand Simulation ===");
         println!("Players: {}", self.players.len());
-        println!("Hole cards per player: {}", self.hole_cards_per_player);
+        println!("Hole cards per player: {}", self.rules.hole_cards_per_player);
+        println!("Decks in shoe: {}", self.rules.num_decks);
 
-        if !self.wild_cards.is_empty() {
+        if !self.rules.wild_cards.is_empty() {
             let wild_cards_str: Vec<String> = self
+                .rules
                 .wild_cards
                 .iter()
                 .map(|card| card.to_string())

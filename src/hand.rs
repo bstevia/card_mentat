@@ -14,6 +14,7 @@ pub enum HandRank {
     FourOfAKind,
     StraightFlush,
     RoyalFlush,
+    FiveOfAKind,
 }
 
 impl fmt::Display for HandRank {
@@ -29,6 +30,7 @@ impl fmt::Display for HandRank {
             HandRank::FourOfAKind => "Four of a Kind",
             HandRank::StraightFlush => "Straight Flush",
             HandRank::RoyalFlush => "Royal Flush",
+            HandRank::FiveOfAKind => "Five of a Kind",
         };
         write!(f, "{}", name)
     }
@@ -38,18 +40,13 @@ impl fmt::Display for HandRank {
 pub struct Hand {
     pub cards: Vec<Card>,
     pub rank: HandRank,
-    pub rank_values: Vec<u8>,
 }
 
 impl Hand {
     pub fn new(mut cards: Vec<Card>, wild_cards: &[Card]) -> Self {
         cards.sort_by(|a, b| b.rank.cmp(&a.rank));
-        let (rank, rank_values) = Self::evaluate_hand(&cards, wild_cards);
-        Hand {
-            cards,
-            rank,
-            rank_values,
-        }
+        let (rank, _) = Self::evaluate_hand(&cards, wild_cards);
+        Hand { cards, rank }
     }
 
     fn evaluate_hand(cards: &[Card], wild_cards: &[Card]) -> (HandRank, Vec<u8>) {
@@ -66,8 +63,7 @@ impl Hand {
             }
         });
 
-        let best_hand = Self::find_best_hand_with_wilds(&working_cards, wild_count);
-        best_hand
+        Self::find_best_hand_with_wilds(&working_cards, wild_count)
     }
 
     fn find_best_hand_with_wilds(cards: &[Card], wild_count: usize) -> (HandRank, Vec<u8>) {
@@ -75,42 +71,12 @@ impl Hand {
             return Self::evaluate_standard_hand(cards);
         }
 
-        // Try all possible combinations of wild cards
-        let mut best_rank = HandRank::HighCard;
-        let mut best_values = vec![];
-
-        let _all_ranks = [
-            Rank::Two,
-            Rank::Three,
-            Rank::Four,
-            Rank::Five,
-            Rank::Six,
-            Rank::Seven,
-            Rank::Eight,
-            Rank::Nine,
-            Rank::Ten,
-            Rank::Jack,
-            Rank::Queen,
-            Rank::King,
-            Rank::Ace,
-        ];
-        let _all_suits = [Suit::Hearts, Suit::Diamonds, Suit::Clubs, Suit::Spades];
-
-        // wild cards: todo
         let mut test_cards = cards.to_vec();
-
-        // Add wild cards as the best possible cards for common hands
         for _ in 0..wild_count {
-            test_cards.push(Card::new(Rank::Ace, Suit::Spades));
+            test_cards.push(Card::new(Rank::Ace, Suit::Spades)); // todo: wild card defaults to As, which may not be the best card in some hands
         }
 
-        let (rank, values) = Self::evaluate_standard_hand(&test_cards);
-        if rank > best_rank {
-            best_rank = rank;
-            best_values = values;
-        }
-
-        (best_rank, best_values)
+        Self::evaluate_standard_hand(&test_cards)
     }
 
     fn evaluate_standard_hand(cards: &[Card]) -> (HandRank, Vec<u8>) {
@@ -134,6 +100,14 @@ impl Hand {
         sorted_counts.sort_by(|a, b| b.cmp(a));
 
         match sorted_counts.as_slice() {
+            [5, ..] => {
+                let five_kind = rank_counts
+                    .iter()
+                    .find(|(_, &count)| count >= 5)
+                    .map(|(&rank, _)| rank as u8)
+                    .unwrap();
+                (HandRank::FiveOfAKind, vec![five_kind])
+            }
             [4, 1] => {
                 let four_kind = rank_counts
                     .iter()
