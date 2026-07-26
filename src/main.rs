@@ -14,6 +14,7 @@ use simulator::PokerSimulator;
 use std::collections::HashMap;
 use std::ops::RangeInclusive;
 use std::process::ExitCode;
+use std::time::Instant;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -175,6 +176,7 @@ fn main() -> ExitCode {
         rules.wild_cards.len(),
     );
 
+    let start = Instant::now();
     let hand_type_counts: HashMap<HandRank, usize> = (0..num_simulations)
         .into_par_iter()
         .fold(HashMap::new, |mut counts, _| {
@@ -191,8 +193,14 @@ fn main() -> ExitCode {
             }
             acc
         });
+    let elapsed = start.elapsed();
 
     let total_hands = num_simulations * rules.num_players;
+    let sims_per_sec = num_simulations as f64 / elapsed.as_secs_f64();
+    println!(
+        "Simulated {} hands in {:.3?} ({:.0} simulations/sec)\n",
+        total_hands, elapsed, sims_per_sec
+    );
     println!("Hand Type Distribution ({} hands):", total_hands);
     for (hand_type, count) in &hand_type_counts {
         let percentage = (*count as f64) / (total_hands as f64) * 100.0;
