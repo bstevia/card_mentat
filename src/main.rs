@@ -39,7 +39,7 @@ struct Args {
     #[arg(short, long)]
     decks: Option<usize>,
 
-    /// Wild card, e.g. `AS`, `10H`, `KD`. Repeat the flag for multiple
+    /// Wild card, e.g. `AS`, `TH`, `KD`. Repeat the flag for multiple
     #[arg(short, long = "wild", value_parser = parse_card)]
     wild: Vec<Card>,
 
@@ -50,6 +50,10 @@ struct Args {
     /// Number of hands to simulate
     #[arg(short = 'n', long, default_value_t = 100_000)]
     simulations: usize,
+
+    /// Print the full state of one sample hand before simulating
+    #[arg(short, long)]
+    verbose: bool,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, ValueEnum)]
@@ -74,7 +78,7 @@ impl GamePreset {
 fn parse_card(s: &str) -> Result<Card, String> {
     let s = s.trim().to_uppercase();
     if s.len() < 2 {
-        return Err(format!("'{s}' is too short for a card (e.g. `AS`, `10H`)"));
+        return Err(format!("'{s}' is too short for a card (e.g. `AS`, `TH`)"));
     }
     let (rank_str, suit_str) = s.split_at(s.len() - 1);
     let suit = match suit_str {
@@ -93,12 +97,12 @@ fn parse_card(s: &str) -> Result<Card, String> {
         "7" => Rank::Seven,
         "8" => Rank::Eight,
         "9" => Rank::Nine,
-        "10" | "T" => Rank::Ten,
+        "T" | "10" => Rank::Ten,
         "J" => Rank::Jack,
         "Q" => Rank::Queen,
         "K" => Rank::King,
         "A" => Rank::Ace,
-        other => return Err(format!("unknown rank '{other}' (use 2-10, T, J, Q, K, A)")),
+        other => return Err(format!("unknown rank '{other}' (use 2-9, T, J, Q, K, A)")),
     };
     Ok(Card::new(rank, suit))
 }
@@ -156,6 +160,13 @@ fn main() -> ExitCode {
     if let Err(err) = rules.validate() {
         eprintln!("Invalid rules: {err}");
         return ExitCode::FAILURE;
+    }
+
+    if args.verbose {
+        let mut sample = PokerSimulator::new(rules.clone());
+        sample.simulate_complete_hand();
+        sample.print_game_state();
+        println!();
     }
 
     let num_simulations = args.simulations;

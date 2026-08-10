@@ -22,6 +22,7 @@ card_mentat [OPTIONS]
 | `--wild` | `-w` | none | Mark a card wild; repeat for several |
 | `--hole-cards-in-play` | | preset | Inclusive range of hole cards a player must use |
 | `--simulations` | `-n` | `100000` | Number of hands to simulate |
+| `--verbose` | `-v` | off | Print the full state of one sample hand before simulating |
 | `--help` | `-h` | | Print help |
 | `--version` | `-V` | | Print version |
 
@@ -35,7 +36,7 @@ Presets set the baseline; explicit flags override it. Note the capital `-H` - lo
 | `omaha` | 4 | 5 | `2..=2` |
 | `five-card-draw` | 5 | 0 | `5..=5` |
 
-**Cards** - rank plus a one-letter suit, case-insensitive: `AS`, `kd`, `2c`. Suits are `H` `D` `C` `S`.
+**Cards** - rank plus a one-letter suit, case-insensitive: `AS`, `kd`, `2c`. Ranks are `2`-`9` `T/10` `J` `Q` `K` `A` Suits are `H` `D` `C` `S`.
 
 **Ranges** - `--hole-cards-in-play` accepts `2..=2`, `2..2`, `2-2`, or `2` (all "exactly two"), or `0..=2` for "up to two". Hold'em is `0..=2`; Omaha is `2..=2`.
 
