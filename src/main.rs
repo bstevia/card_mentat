@@ -213,8 +213,10 @@ fn main() -> ExitCode {
         total_hands, elapsed, sims_per_sec
     );
     println!("Hand Type Distribution ({} hands):", total_hands);
-    for (hand_type, count) in &hand_type_counts {
-        let percentage = (*count as f64) / (total_hands as f64) * 100.0;
+    let mut sorted_counts: Vec<_> = hand_type_counts.into_iter().collect();
+    sorted_counts.sort_by_key(|(hand_type, _)| *hand_type);
+    for (hand_type, count) in sorted_counts {
+        let percentage = (count as f64) / (total_hands as f64) * 100.0;
         println!("  {:?}: {:.2}%", hand_type, percentage);
     }
 
